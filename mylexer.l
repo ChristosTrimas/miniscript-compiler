@@ -1,8 +1,9 @@
 %{
 	#include <stdio.h>
 	#include <stdlib.h>
+	#include <string.h>
 	#include "cgen.h"
-	#include "mslib.h"
+	#include "myanalyzer.tab.h"
 	int lineNum = 1;
 %}
 
@@ -24,7 +25,7 @@ void		 { printf("Token KEYWORD_VOID:\t%s\n", yytext); return KEYWORD_VOID;};
 true		 { printf("Token KEYWORD_TRUE:\t%s\n", yytext); return KEYWORD_TRUE;};
 false		 { printf("Token KEYWORD_FALSE:\t%s\n", yytext); return KEYWORD_FALSE;};
 var		 { printf("Token KEYWORD_VAR:\t%s\n", yytext); return KEYWORD_VAR;};
-cosnt		 { printf("Token KEYWORD_CONST:\t%s\n", yytext); return KEYWORD_CONST;};
+const		 { printf("Token KEYWORD_CONST:\t%s\n", yytext); return KEYWORD_CONST;};
 if		 { printf("Token KEYWORD_IF:\t%s\n", yytext); return KEYWORD_IF;};
 else		 { printf("Token KEYWORD_ELSE:\t%s\n", yytext); return KEYWORD_ELSE;};
 for		 { printf("Token KEYWORD_FOR:\t%s\n", yytext); return KEYWORD_FOR;};
@@ -55,6 +56,7 @@ start		 { printf("Token KEYWORD_START:\t%s\n", yytext); return KEYWORD_START;};
 "]"        { printf("token RIGHT_BRACKET:\t%s\n", yytext); return RIGHT_BRACKET;};
 "{"        { printf("token LEFT_CURLY_BRACKET:\t%s\n", yytext); return LEFT_CURLY_BRACKET;};
 "}"        { printf("token RIGHT_CURLY_BRACKET:\t%s\n", yytext); return RIGHT_CURLY_BRACKET;};
+","        { printf("token COMMA:\t%s\n", yytext); return COMMA;};
 
 
 "+"        { printf("token PLUS_OP:\t%s\n", yytext); return PLUS_OP;};
@@ -76,14 +78,15 @@ start		 { printf("Token KEYWORD_START:\t%s\n", yytext); return KEYWORD_START;};
 "/*"					BEGIN(comment);
 <comment>[^*\n]*        /* eat anything that's not a '*' */
 <comment>"*"+[^*/\n]*   /* eat up '*'s not followed by ')'s */
-<comment>\n             ++line_num;
+<comment>\n             ++lineNum;
 <comment>"*"+"/"        BEGIN(INITIAL);
 
 
 [ \r\t]				/* skip whitespace */
-\n 						++line_num;
+\n 						++lineNum;
 <<EOF>> 			return EOF;
 
-.             { yyerror("lexical error: unrecognized literal '%s'\n", yytext); }
+.        { printf("\n\n/** Lexical error in line %d **/\n", lineNum); 
+		   yyerror("unrecognised literal : '%s' \n", yytext); }
 
 %%
