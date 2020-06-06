@@ -1,12 +1,12 @@
 #!/bin/bash
 
 bison -d -v -r all myanalyzer.y
-flex mylexer.l #give name of .l file
-gcc -o mycompiler myanalyzer.tab.c lex.yy.c cgen.c -lfl
+flex mylexer.l 
+gcc -o mycompiler lex.yy.c myanalyzer.tab.c cgen.c -lfl
 
-./mycompiler < myprog.ms
-gcc -o myprog myprog.c 
-./myprog
+./mycompiler < myprog.ms > sample.c
+gcc -o sample sample.c 
+./sample
 
 rm lex.yy.c myanalyzer.tab.c  myanalyzer.tab.h 
-rm mycompiler myanalyzer.output myprog
+rm mycompiler myanalyzer.output sample sample.c

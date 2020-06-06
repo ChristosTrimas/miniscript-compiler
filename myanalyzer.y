@@ -120,7 +120,7 @@ extern int lineNum;
 %type <crepr> var_initialize
 %type <crepr> var_ident
 %type <crepr> data_type
-%type <crepr> type
+%type <crepr> type help
 
 %type <crepr> input
 %start input
@@ -175,24 +175,27 @@ list_statements : statement_declaration	{$$ = template("\t%s\n", $1); }
 				| list_statements statement_declaration { $$ = template("%s\n\t%s\n", $1, $2); };
 
 statement_declaration : declaration   { $$ = template("%s",$1); }
-					  | statements 	  { $$ = template("%s",$1); };
+					  | statements 	  { $$ = template("%s",$1); }
+					  | statements SEMICOLON;
 
-statements  : var_ident ASSIGN_OP expression SEMICOLON  { $$ = template("%s = %s;",$1, $3); }
-			| if_statement SEMICOLON 					{ $$ = template("%s;",$1); }
+statements  : var_ident ASSIGN_OP expression   { $$ = template("%s = %s;",$1, $3); }
+			| var_ident ASSIGN_OP function   { $$ = template("%s = %s;",$1, $3); }
+			| if_statement  					{ $$ = template("%s;",$1); }
 			| for_statement SEMICOLON					{ $$ = template("%s;",$1); }
 			| while_statement SEMICOLON					{ $$ = template("%s;",$1); }
-			| function SEMICOLON						{ $$ = template("%s;",$1); }
+			| function SEMICOLON						{ $$ = template("%s",$1); }
 			| return SEMICOLON							{ $$ = template("%s;",$1); };
 
-if_statement : KEYWORD_IF LEFT_PARENTHESIS expression RIGHT_PARENTHESIS statement_cont { $$ = template("if (%s)  {\n%s\n} ", $3, $5); }
+if_statement : KEYWORD_IF LEFT_PARENTHESIS expression RIGHT_PARENTHESIS statement_cont SEMICOLON{ $$ = template("if (%s)  {\n%s\n} ", $3, $5); }
+			 | KEYWORD_IF LEFT_PARENTHESIS expression RIGHT_PARENTHESIS LEFT_CURLY_BRACKET statements pos_statements RIGHT_CURLY_BRACKET SEMICOLON{ $$ = template("if (%s)  {\n%s\n%s\n} ", $3, $6,$7); }
 			 | if_statement else_statement { $$ = template("%s %s", $1, $2); };	
 
-else_statement : KEYWORD_ELSE  statement_cont { $$ = template("else {\n%s\n}", $2); }
-			   | KEYWORD_ELSE KEYWORD_IF expression statement_cont { $$ = template("else if (%s)  {\n%s\n}", $3, $4); };
+else_statement : KEYWORD_ELSE LEFT_CURLY_BRACKET statements pos_statements RIGHT_CURLY_BRACKET SEMICOLON{ $$ = template("else {\n%s\n%s\n}", $3,$4); }
+			   | KEYWORD_ELSE KEYWORD_IF LEFT_PARENTHESIS expression RIGHT_PARENTHESIS statement_cont SEMICOLON{ $$ = template("else if (%s)  {\n%s\n}", $4, $6); };
 
-for_statement : KEYWORD_FOR LEFT_PARENTHESIS statements SEMICOLON expression SEMICOLON statement_cont RIGHT_PARENTHESIS statement_cont { $$ = template("for (%s; %s;%s++){\n%s\n}", $3, $5, $7, $9);};
+for_statement : KEYWORD_FOR LEFT_PARENTHESIS statements SEMICOLON expression SEMICOLON statement_cont RIGHT_PARENTHESIS statements pos_statements { $$ = template("for (%s; %s;%s++){\n%s\n%s\n}", $3, $5, $7, $9,$10);};
 
-while_statement : KEYWORD_WHILE LEFT_PARENTHESIS expression RIGHT_PARENTHESIS statement_cont {$$ = template("while(%s) {\n%s\n}", $3, $5);};
+while_statement : KEYWORD_WHILE LEFT_PARENTHESIS expression RIGHT_PARENTHESIS LEFT_CURLY_BRACKET statements pos_statements RIGHT_CURLY_BRACKET {$$ = template("while(%s) {\n%s\n%s\n}", $3, $6,$7);};
 
 function : TOKEN_IDENTIFIER LEFT_PARENTHESIS function_variable_list RIGHT_PARENTHESIS  {$$ = template("%s(%s);\n",$1,$3);};
 
@@ -218,7 +221,11 @@ statement_cont: //I created only for if,  else , while, for
 			  | profunc_call  							{ $$ = template("%s;", $1); };
 
 
-expression: TOKEN_NUM 							
+help : TOKEN_NUM
+	 | TOKEN_NUM SEMICOLON
+	 | TOKEN_STRING		{ $$ = template("%s", $1); }; ;
+
+expression: help 				
           | TOKEN_REAL
           | var_ident
           | var_ident table_exp					{ $$ = template("%s%s", $1, $2); }
@@ -228,7 +235,7 @@ expression: TOKEN_NUM
           | expression SQUARE_OP expression { $$ = template("%s ** %s", $1, $3); }
           | expression MULT_OP expression 	{ $$ = template("%s * %s", $1, $3); }
 		  | expression DIV_OP expression 	{ $$ = template("%s / %s", $1, $3); }
-		  | expression MOD_OP expression 	{ $$ = template("%s %/**/ %s", $1, $3); }		  
+		  | expression MOD_OP expression 	{ $$ = template("%s % %s", $1, $3); }		  
           | PLUS_OP expression 				{ $$ = template("+ %s", $2); }
 		  | MINUS_OP expression 			{ $$ = template("- %s", $2); }
 		  | expression PLUS_OP expression 	{ $$ = template("%s + %s", $1, $3); }
@@ -245,7 +252,7 @@ expression: TOKEN_NUM
 table_exp: LEFT_BRACKET expression RIGHT_BRACKET { $$ = template("[%s]",  $2); }
 		 | table_exp LEFT_BRACKET expression RIGHT_BRACKET {  $$ = template("%s [%s]", $1, $3); };
 
-profunc_call: TOKEN_IDENTIFIER LEFT_PARENTHESIS pos_statements RIGHT_PARENTHESIS 	{ $$ = template("%s(%s)", $1, $3); };
+profunc_call: TOKEN_IDENTIFIER LEFT_PARENTHESIS expression RIGHT_PARENTHESIS 	{ $$ = template("%s(%s)", $1, $3); };
 
 declaration : KEYWORD_VAR var_body		{ $$ = template("%s", $2); }
 			| KEYWORD_CONST var_body	{ $$ = template("const %s", $2); };
@@ -267,9 +274,9 @@ data_type : TOKEN_IDENTIFIER	{ $$ = template("%s", $1); }
 		  | TOKEN_STRING		{ $$ = template("%s", $1); }; 
 		  //check for boolean later
 
-type : KEYWORD_NUMBER			{ $$ = template("%s", "number"); }
-	 | KEYWORD_BOOLEAN			{ $$ = template("%s", "boolean"); }
-	 | KEYWORD_STRING			{ $$ = template("%s", "string"); };
+type : KEYWORD_NUMBER			{ $$ = template("%s", "double"); }
+	 | KEYWORD_BOOLEAN			{ $$ = template("%s", "int"); }
+	 | KEYWORD_STRING			{ $$ = template("%s", "char*"); };
 
 %%
 
@@ -278,7 +285,7 @@ int main ()
 
  if (yyparse()==0) {
  	if (yyerror_count==0)
- 		printf("\n===== Accepted =====\n");
+ 		printf("\n//===== Accepted =====\n");
  	else {
  		printf("\n\n===== Rejected =====\n\n"); // due to lexical error
   	}

@@ -7,7 +7,7 @@ function prime(n: number): boolean {
    var result, isPrime: boolean;
       
    if (n < 0) 
-      result = prime(n);
+      result = prime(-n);
    else if (n < 2) 
       result = false;
    else if (n == 2) 
