@@ -179,12 +179,12 @@ statement_declaration : declaration   { $$ = template("%s",$1); }
 					  | statements SEMICOLON;
 
 statements  : var_ident ASSIGN_OP expression   { $$ = template("%s = %s;",$1, $3); }
-			| var_ident ASSIGN_OP function   { $$ = template("%s = %s;",$1, $3); }
-			| if_statement  					{ $$ = template("%s;",$1); }
-			| for_statement SEMICOLON					{ $$ = template("%s;",$1); }
-			| while_statement SEMICOLON					{ $$ = template("%s;",$1); }
+			| var_ident ASSIGN_OP function   { $$ = template("%s = %s",$1, $3); }
+			| if_statement  					{ $$ = template("%s",$1); }
+			| for_statement SEMICOLON					{ $$ = template("%s",$1); }
+			| while_statement SEMICOLON					{ $$ = template("%s",$1); }
 			| function SEMICOLON						{ $$ = template("%s",$1); }
-			| return SEMICOLON							{ $$ = template("%s;",$1); };
+			| return SEMICOLON							{ $$ = template("%s",$1); };
 
 if_statement : KEYWORD_IF LEFT_PARENTHESIS expression RIGHT_PARENTHESIS statement_cont SEMICOLON{ $$ = template("if (%s)  {\n%s\n} ", $3, $5); }
 			 | KEYWORD_IF LEFT_PARENTHESIS expression RIGHT_PARENTHESIS LEFT_CURLY_BRACKET statements pos_statements RIGHT_CURLY_BRACKET SEMICOLON{ $$ = template("if (%s)  {\n%s\n%s\n} ", $3, $6,$7); }
@@ -235,7 +235,7 @@ expression: help
           | expression SQUARE_OP expression { $$ = template("%s ** %s", $1, $3); }
           | expression MULT_OP expression 	{ $$ = template("%s * %s", $1, $3); }
 		  | expression DIV_OP expression 	{ $$ = template("%s / %s", $1, $3); }
-		  | expression MOD_OP expression 	{ $$ = template("%s % %s", $1, $3); }		  
+		  | expression MOD_OP expression 	{ $$ = template("%s %% %s", $1, $3); }		  
           | PLUS_OP expression 				{ $$ = template("+ %s", $2); }
 		  | MINUS_OP expression 			{ $$ = template("- %s", $2); }
 		  | expression PLUS_OP expression 	{ $$ = template("%s + %s", $1, $3); }
@@ -268,10 +268,13 @@ var_initialize : var_ident
 var_ident : TOKEN_IDENTIFIER { $$ = template("%s", $1); }
 	      | TOKEN_IDENTIFIER LEFT_BRACKET TOKEN_NUM RIGHT_BRACKET { $$ = template("%s[%s]", $1, $3); };
 
-data_type : TOKEN_IDENTIFIER	{ $$ = template("%s", $1); }
-		  | TOKEN_NUM			{ $$ = template("%s", $1); }
-		  | TOKEN_REAL			{ $$ = template("%s", $1); }
-		  | TOKEN_STRING		{ $$ = template("%s", $1); }; 
+data_type : TOKEN_IDENTIFIER			{ $$ = template("%s", $1); }
+		  | TOKEN_NUM					{ $$ = template("%s", $1); }
+		  | TOKEN_REAL					{ $$ = template("%s", $1); }
+		  | TOKEN_STRING				{ $$ = template("%s", $1); }
+		  | MINUS_OP TOKEN_IDENTIFIER 	{ $$ = template("-%s", $2); }
+		  | MINUS_OP TOKEN_NUM		  	{ $$ = template("-%s", $2); }
+		  | MINUS_OP TOKEN_REAL 		{ $$ = template("-%s", $2); }; 
 		  //check for boolean later
 
 type : KEYWORD_NUMBER			{ $$ = template("%s", "double"); }
